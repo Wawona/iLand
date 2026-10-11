@@ -84,6 +84,16 @@ pkgs.stdenv.mkDerivation {
         's/cmake_minimum_required\(VERSION [0-9]+(\.[0-9]+)*/cmake_minimum_required(VERSION 3.5/' \
         "$f" || true
     done
+    # Upstream LLVM_LIST pulls AArch64Disassembler but omits the MC base
+    # units it needs. Without these, the static merge has no
+    # llvm::MCDisassembler / MCExternalSymbolizer and iOS-sim Ld fails.
+    substituteInPlace third_party/llvm-10.0/CMakeLists.txt \
+      --replace-fail \
+        '''${LLVM_DIR}/lib/MC/MCDisassembler/MCRelocationInfo.cpp''' \
+        '''${LLVM_DIR}/lib/MC/MCDisassembler/MCRelocationInfo.cpp
+    ${LLVM_DIR}/lib/MC/MCDisassembler/MCDisassembler.cpp
+    ${LLVM_DIR}/lib/MC/MCDisassembler/MCExternalSymbolizer.cpp
+    ${LLVM_DIR}/lib/MC/MCDisassembler/MCSymbolizer.cpp'''
 ${lib.optionalString (!buildShared) ''
     # SwiftShader declares its Vulkan ICD explicitly SHARED, so the generic
     # BUILD_SHARED_LIBS switch cannot make an Apple-mobile archive. Mobile
