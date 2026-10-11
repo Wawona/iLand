@@ -243,9 +243,15 @@ ${if buildShared then ''
     # LLVM under build/ (including Darwin/iOS MC). Skip build/bin (API copies).
     # Always put "$icd" first: excluding every libvk_swiftshader.a by name
     # dropped the namespaced Vulkan objects and failed the ABI grep.
+    # libtool -static concatenates members. Dependency archives often repeat
+    # the same .o basenames as the ICD; force_load then fails with hundreds of
+    # duplicate symbols. Deduplicate by basename (first archive wins).
     archives=("$icd")
     while IFS= read -r archive; do
       [ "$archive" = "$icd" ] && continue
+      case "$(basename "$archive")" in
+        libvk_swiftshader.a) continue ;;
+      esac
       archives+=("$archive")
     done < <(
       find build -type f -name '*.a' \
@@ -253,7 +259,35 @@ ${if buildShared then ''
         -print | LC_ALL=C sort
     )
     test "''${#archives[@]}" -gt 1
-    xcrun --sdk ${appleSdk} libtool -static -o "$out/lib/libvk_swiftshader.a" "''${archives[@]}"
+    merge_dir="$TMPDIR/swiftshader-merge-objs"
+    rm -rf "$merge_dir"
+    mkdir -p "$merge_dir"
+    idx=0
+    for archive in "''${archives[@]}"; do
+      ext="$TMPDIR/ss-ar-ext-$idx"
+      rm -rf "$ext"
+      mkdir -p "$ext"
+      (cd "$ext" && xcrun --sdk ${appleSdk} ar x "$archive")
+      for obj in "$ext"/*; do
+        [ -f "$obj" ] || continue
+        base=$(basename "$obj")
+        case "$base" in
+          *.o) ;;
+          *) continue ;;
+        esac
+        if [ ! -e "$merge_dir/$base" ]; then
+          mv "$obj" "$merge_dir/$base"
+        fi
+      done
+      idx=$((idx + 1))
+    done
+    obj_count=$(find "$merge_dir" -name '*.o' | wc -l | tr -d ' ')
+    test "$obj_count" -gt 1
+    xcrun --sdk ${appleSdk} libtool -static -o "$out/lib/libvk_swiftshader.a" "$merge_dir"/*.o
+    if ar t "$out/lib/libvk_swiftshader.a" | sort | uniq -d | grep .; then
+      echo "SwiftShader static archive still has duplicate member basenames" >&2
+      exit 1
+    fi
     # Prove the public ABI is namespaced, rather than accepting a duplicate
     # definition beside MoltenVK. Full app linking proves dependency closure.
     xcrun --sdk ${appleSdk} nm -gU "$out/lib/libvk_swiftshader.a" > "$TMPDIR/swiftshader-symbols.txt"
