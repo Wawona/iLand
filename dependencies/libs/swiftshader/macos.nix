@@ -91,8 +91,8 @@ pkgs.stdenv.mkDerivation {
 from pathlib import Path
 p = Path("third_party/llvm-10.0/CMakeLists.txt")
 t = p.read_text()
-# Split so Nix does not interpolate ${LLVM_DIR} inside this postPatch.
-llvm = "${" + "LLVM_DIR}"
+# Split so Nix does not interpolate LLVM_DIR inside this postPatch.
+llvm = "''${" + "LLVM_DIR}"
 needle = f"{llvm}/lib/MC/MCDisassembler/MCRelocationInfo.cpp"
 insert = needle + f"""
     {llvm}/lib/MC/MCDisassembler/MCDisassembler.cpp
