@@ -247,9 +247,13 @@ ${if buildShared then ''
       exit 1
     fi
     # Fail closed if LLVM MC base stayed out of the merge (app Ld then dies).
-    if xcrun --sdk ${appleSdk} nm -u "$out/lib/libvk_swiftshader.a" \
-         | grep -E 'MCDisassembler|MCExternalSymbolizer'; then
-      echo "SwiftShader static archive still has undefined LLVM MC symbols" >&2
+    # Do not use nm -u on the archive: member .o files still list U refs to
+    # symbols defined in other members; that is normal until final Ld. Require
+    # the MC typeinfo/dtor to be present as defined text/data instead.
+    if ! grep -E ' [TDS] __ZTIN4llvm14MCDisassemblerE$' "$TMPDIR/swiftshader-symbols.txt" \
+      && ! grep -E ' [TDS] __ZN4llvm14MCDisassemblerD2Ev$' "$TMPDIR/swiftshader-symbols.txt"; then
+      echo "SwiftShader static archive missing defined llvm::MCDisassembler" >&2
+      grep -E 'MCDisassembler' "$TMPDIR/swiftshader-symbols.txt" | head -20 >&2 || true
       exit 1
     fi
 ''}
