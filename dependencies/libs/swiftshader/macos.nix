@@ -275,7 +275,12 @@ ${if buildShared then ''
           *.o) ;;
           *) continue ;;
         esac
+        # Keep the largest object for a basename. Smaller first copies are often
+        # stubs; first-wins then leaves undefined LLVM / Reactor symbols at Ld.
         if [ ! -e "$merge_dir/$base" ]; then
+          mv "$obj" "$merge_dir/$base"
+        elif [ "$(stat -f%z "$obj" 2>/dev/null || stat -c%s "$obj")" -gt \
+               "$(stat -f%z "$merge_dir/$base" 2>/dev/null || stat -c%s "$merge_dir/$base")" ]; then
           mv "$obj" "$merge_dir/$base"
         fi
       done
