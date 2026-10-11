@@ -219,16 +219,17 @@ ${if buildShared then ''
     install -m755 "$icd" "$out/lib/libvk_swiftshader.dylib"
 '' else ''
     # A STATIC target does not absorb its transitive static libraries. Merge
-    # the built target closure. Prefer third_party LLVM archives under
-    # build/; excluding build/Darwin and build/iOS dropped MCDisassembler
-    # and left AArch64Disassembler.o with undefined llvm::MC* typeinfo
-    # (Wawona iOS-sim Ld fail). Still skip build/bin (post-build API copies)
-    # and the incomplete libvk_swiftshader.a itself before re-merge.
-    archives=()
-    while IFS= read -r archive; do archives+=("$archive"); done < <(
+    # the ICD archive plus its build/ dependency archives. Prefer third_party
+    # LLVM under build/ (including Darwin/iOS MC). Skip build/bin (API copies).
+    # Always put "$icd" first: excluding every libvk_swiftshader.a by name
+    # dropped the namespaced Vulkan objects and failed the ABI grep.
+    archives=("$icd")
+    while IFS= read -r archive; do
+      [ "$archive" = "$icd" ] && continue
+      archives+=("$archive")
+    done < <(
       find build -type f -name '*.a' \
         ! -path 'build/bin/*' \
-        ! -name 'libvk_swiftshader.a' \
         -print | LC_ALL=C sort
     )
     test "''${#archives[@]}" -gt 1
@@ -236,7 +237,11 @@ ${if buildShared then ''
     # Prove the public ABI is namespaced, rather than accepting a duplicate
     # definition beside MoltenVK. Full app linking proves dependency closure.
     xcrun --sdk ${appleSdk} nm -gU "$out/lib/libvk_swiftshader.a" > "$TMPDIR/swiftshader-symbols.txt"
-    grep -E ' T _wwn_swiftshader_vkGetInstanceProcAddr$' "$TMPDIR/swiftshader-symbols.txt"
+    if ! grep -E ' T _wwn_swiftshader_vkGetInstanceProcAddr$' "$TMPDIR/swiftshader-symbols.txt"; then
+      echo "SwiftShader static archive missing namespaced vkGetInstanceProcAddr" >&2
+      grep -E 'vkGetInstanceProcAddr' "$TMPDIR/swiftshader-symbols.txt" | head -20 >&2 || true
+      exit 1
+    fi
     if grep -E ' T _vk(GetInstanceProcAddr|CreateInstance)$' "$TMPDIR/swiftshader-symbols.txt"; then
       echo "SwiftShader static archive leaks the shared Vulkan ABI" >&2
       exit 1
