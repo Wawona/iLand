@@ -87,13 +87,21 @@ pkgs.stdenv.mkDerivation {
     # Upstream LLVM_LIST pulls AArch64Disassembler but omits the MC base
     # units it needs. Without these, the static merge has no
     # llvm::MCDisassembler / MCExternalSymbolizer and iOS-sim Ld fails.
-    substituteInPlace third_party/llvm-10.0/CMakeLists.txt \
-      --replace-fail \
-        '''${LLVM_DIR}/lib/MC/MCDisassembler/MCRelocationInfo.cpp''' \
-        '''${LLVM_DIR}/lib/MC/MCDisassembler/MCRelocationInfo.cpp
+    python3 - <<'PY_LLVM_MC'
+from pathlib import Path
+p = Path("third_party/llvm-10.0/CMakeLists.txt")
+t = p.read_text()
+needle = "${LLVM_DIR}/lib/MC/MCDisassembler/MCRelocationInfo.cpp"
+insert = needle + """
     ${LLVM_DIR}/lib/MC/MCDisassembler/MCDisassembler.cpp
     ${LLVM_DIR}/lib/MC/MCDisassembler/MCExternalSymbolizer.cpp
-    ${LLVM_DIR}/lib/MC/MCDisassembler/MCSymbolizer.cpp'''
+    ${LLVM_DIR}/lib/MC/MCDisassembler/MCSymbolizer.cpp"""
+if needle not in t:
+    raise SystemExit("MCRelocationInfo.cpp anchor missing from LLVM_LIST")
+if "MCDisassembler/MCDisassembler.cpp" not in t:
+    t = t.replace(needle, insert, 1)
+    p.write_text(t)
+PY_LLVM_MC
 ${lib.optionalString (!buildShared) ''
     # SwiftShader declares its Vulkan ICD explicitly SHARED, so the generic
     # BUILD_SHARED_LIBS switch cannot make an Apple-mobile archive. Mobile
