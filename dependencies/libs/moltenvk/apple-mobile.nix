@@ -82,6 +82,15 @@ let
     rev = "e3b1eec08173d6b825cd3ac88c885a63b621504a";
     hash = "sha256-tAYvYx/Mqvf/I177xmx7oLZVc7S7GK3MArY3i+FCYuw=";
   };
+
+  # On Apple silicon, generic/platform=iOS Simulator otherwise builds both
+  # arm64 and x86_64 ExternalDependencies (SPIRV-Tools). That doubles wall
+  # time and RAM. Product simulators on this host are arm64 only.
+  simArchArgs = lib.optionals (simulator && pkgs.stdenv.hostPlatform.isAarch64) [
+    "ONLY_ACTIVE_ARCH=YES"
+    "ARCHS=arm64"
+    "EXCLUDED_ARCHS=x86_64 i386"
+  ];
 in
 pkgs.stdenv.mkDerivation (finalAttrs: {
   pname = "moltenvk-${platformName}${lib.optionalString simulator "-sim"}";
@@ -160,6 +169,7 @@ pkgs.stdenv.mkDerivation (finalAttrs: {
       -destination "generic/platform=${xcodePlatform}" \
       -derivedDataPath "$PWD/External/build" \
       "${if isVisionOS then "XROS_DEPLOYMENT_TARGET" else if isTVOS then "TVOS_DEPLOYMENT_TARGET" else "IPHONEOS_DEPLOYMENT_TARGET"}=${iosToolchain.deploymentTarget}" \
+      ${lib.escapeShellArgs simArchArgs} \
       build
 
     xcodebuild \
@@ -170,6 +180,7 @@ pkgs.stdenv.mkDerivation (finalAttrs: {
       -derivedDataPath "$PWD/build" \
       "${if isVisionOS then "XROS_DEPLOYMENT_TARGET" else if isTVOS then "TVOS_DEPLOYMENT_TARGET" else "IPHONEOS_DEPLOYMENT_TARGET"}=${iosToolchain.deploymentTarget}" \
       GCC_PREPROCESSOR_DEFINITIONS='$(inherited) MVK_USE_METAL_PRIVATE_API=0' \
+      ${lib.escapeShellArgs simArchArgs} \
       build
 
     runHook postBuild
