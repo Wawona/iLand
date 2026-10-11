@@ -91,11 +91,13 @@ pkgs.stdenv.mkDerivation {
 from pathlib import Path
 p = Path("third_party/llvm-10.0/CMakeLists.txt")
 t = p.read_text()
-needle = "${LLVM_DIR}/lib/MC/MCDisassembler/MCRelocationInfo.cpp"
-insert = needle + """
-    ${LLVM_DIR}/lib/MC/MCDisassembler/MCDisassembler.cpp
-    ${LLVM_DIR}/lib/MC/MCDisassembler/MCExternalSymbolizer.cpp
-    ${LLVM_DIR}/lib/MC/MCDisassembler/MCSymbolizer.cpp"""
+# Split so Nix does not interpolate ${LLVM_DIR} inside this postPatch.
+llvm = "${" + "LLVM_DIR}"
+needle = f"{llvm}/lib/MC/MCDisassembler/MCRelocationInfo.cpp"
+insert = needle + f"""
+    {llvm}/lib/MC/MCDisassembler/MCDisassembler.cpp
+    {llvm}/lib/MC/MCDisassembler/MCExternalSymbolizer.cpp
+    {llvm}/lib/MC/MCDisassembler/MCSymbolizer.cpp"""
 if needle not in t:
     raise SystemExit("MCRelocationInfo.cpp anchor missing from LLVM_LIST")
 if "MCDisassembler/MCDisassembler.cpp" not in t:
