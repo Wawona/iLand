@@ -219,12 +219,16 @@ ${if buildShared then ''
     install -m755 "$icd" "$out/lib/libvk_swiftshader.dylib"
 '' else ''
     # A STATIC target does not absorb its transitive static libraries. Merge
-    # the built target closure, excluding upstream's post-build API copies.
-    # Building only vk_swiftshader keeps unrelated tools/tests out of this set.
+    # the built target closure. Prefer third_party LLVM archives under
+    # build/; excluding build/Darwin and build/iOS dropped MCDisassembler
+    # and left AArch64Disassembler.o with undefined llvm::MC* typeinfo
+    # (Wawona iOS-sim Ld fail). Still skip build/bin (post-build API copies)
+    # and the incomplete libvk_swiftshader.a itself before re-merge.
     archives=()
     while IFS= read -r archive; do archives+=("$archive"); done < <(
       find build -type f -name '*.a' \
-        ! -path 'build/bin/*' ! -path 'build/iOS/*' ! -path 'build/Darwin/*' \
+        ! -path 'build/bin/*' \
+        ! -name 'libvk_swiftshader.a' \
         -print | LC_ALL=C sort
     )
     test "''${#archives[@]}" -gt 1
@@ -235,6 +239,12 @@ ${if buildShared then ''
     grep -E ' T _wwn_swiftshader_vkGetInstanceProcAddr$' "$TMPDIR/swiftshader-symbols.txt"
     if grep -E ' T _vk(GetInstanceProcAddr|CreateInstance)$' "$TMPDIR/swiftshader-symbols.txt"; then
       echo "SwiftShader static archive leaks the shared Vulkan ABI" >&2
+      exit 1
+    fi
+    # Fail closed if LLVM MC base stayed out of the merge (app Ld then dies).
+    if xcrun --sdk ${appleSdk} nm -u "$out/lib/libvk_swiftshader.a" \
+         | grep -E 'MCDisassembler|MCExternalSymbolizer'; then
+      echo "SwiftShader static archive still has undefined LLVM MC symbols" >&2
       exit 1
     fi
 ''}
