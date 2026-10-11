@@ -252,9 +252,10 @@ ${if buildShared then ''
     # LLVM under build/ (including Darwin/iOS MC). Skip build/bin (API copies).
     # Always put "$icd" first: excluding every libvk_swiftshader.a by name
     # dropped the namespaced Vulkan objects and failed the ABI grep.
-    # libtool -static concatenates members. Dependency archives often repeat
-    # the same .o basenames as the ICD; force_load then fails with hundreds of
-    # duplicate symbols. Deduplicate by basename (first archive wins).
+    # Dependency archives repeat .o basenames; keep-largest by exact name.
+    # Never write original basenames into Darwin TMPDIR: APFS is
+    # case-insensitive, so Pass.cpp.o vs pass.cpp.o (LLVM vs SPIRV-Tools)
+    # collide and drop LLVM RTTI / Pass vtables. Stage as keep-%d.o.
     archives=("$icd")
     while IFS= read -r archive; do
       [ "$archive" = "$icd" ] && continue
@@ -271,33 +272,62 @@ ${if buildShared then ''
     merge_dir="$TMPDIR/swiftshader-merge-objs"
     rm -rf "$merge_dir"
     mkdir -p "$merge_dir"
-    idx=0
-    for archive in "''${archives[@]}"; do
-      ext="$TMPDIR/ss-ar-ext-$idx"
-      rm -rf "$ext"
-      mkdir -p "$ext"
-      (cd "$ext" && xcrun --sdk ${appleSdk} ar x "$archive")
-      for obj in "$ext"/*; do
-        [ -f "$obj" ] || continue
-        base=$(basename "$obj")
-        case "$base" in
-          *.o) ;;
-          *) continue ;;
-        esac
-        # Keep the largest object for a basename. Smaller first copies are often
-        # stubs; first-wins then leaves undefined LLVM / Reactor symbols at Ld.
-        if [ ! -e "$merge_dir/$base" ]; then
-          mv "$obj" "$merge_dir/$base"
-        elif [ "$(stat -f%z "$obj" 2>/dev/null || stat -c%s "$obj")" -gt \
-               "$(stat -f%z "$merge_dir/$base" 2>/dev/null || stat -c%s "$merge_dir/$base")" ]; then
-          mv "$obj" "$merge_dir/$base"
-        fi
-      done
-      idx=$((idx + 1))
-    done
-    obj_count=$(find "$merge_dir" -name '*.o' | wc -l | tr -d ' ')
+    archive_list="$TMPDIR/swiftshader-archives.txt"
+    printf '%s\n' "''${archives[@]}" > "$archive_list"
+    python3 - "$archive_list" "$merge_dir" <<'PY'
+import os, subprocess, sys
+
+list_path, merge_dir = sys.argv[1], sys.argv[2]
+archives = [ln.strip() for ln in open(list_path) if ln.strip()]
+# Exact basename -> largest bytes (case-sensitive keys).
+best = {}
+for i, archive in enumerate(archives):
+    ext = os.path.join(os.environ["TMPDIR"], "ss-ar-ext-%d" % i)
+    os.makedirs(ext, exist_ok=True)
+    subprocess.check_call(
+        ["xcrun", "--sdk", "${appleSdk}", "ar", "x", archive],
+        cwd=ext,
+    )
+    for name in os.listdir(ext):
+        if not name.endswith(".o"):
+            continue
+        path = os.path.join(ext, name)
+        if not os.path.isfile(path):
+            continue
+        data = open(path, "rb").read()
+        prev = best.get(name)
+        if prev is None or len(data) > len(prev):
+            best[name] = data
+
+if len(best) < 2:
+    raise SystemExit("too few unique .o members: %d" % len(best))
+
+# Fail closed if Darwin case-fold would have collapsed LLVM vs SPIRV pairs.
+folded = {}
+for name in best:
+    folded.setdefault(name.lower(), []).append(name)
+pairs = [v for v in folded.values() if len(v) > 1]
+print(
+    "swiftshader-merge: %d case-variant basename groups kept separate"
+    % len(pairs)
+)
+# LLVM (Pass.cpp.o) vs SPIRV-Tools (pass.cpp.o) and similar pairs. If this
+# drops to 0, Darwin case-fold staging is broken again.
+if len(pairs) < 8:
+    raise SystemExit(
+        "expected >=8 case-variant .o pairs (LLVM vs SPIRV); got %d: %r"
+        % (len(pairs), pairs[:8])
+    )
+
+for i, (name, data) in enumerate(sorted(best.items())):
+    # keep-%d.o only: never embed basename (case-fold safe).
+    out = os.path.join(merge_dir, "keep-%d.o" % i)
+    open(out, "wb").write(data)
+print("swiftshader-merge: %d unique .o members (keep-largest)" % len(best))
+PY
+    obj_count=$(find "$merge_dir" -name 'keep-*.o' | wc -l | tr -d ' ')
     test "$obj_count" -gt 1
-    xcrun --sdk ${appleSdk} libtool -static -o "$out/lib/libvk_swiftshader.a" "$merge_dir"/*.o
+    xcrun --sdk ${appleSdk} libtool -static -o "$out/lib/libvk_swiftshader.a" "$merge_dir"/keep-*.o
     if ar t "$out/lib/libvk_swiftshader.a" | sort | uniq -d | grep .; then
       echo "SwiftShader static archive still has duplicate member basenames" >&2
       exit 1
@@ -322,6 +352,18 @@ ${if buildShared then ''
       && ! grep -E ' [TDS] __ZN4llvm14MCDisassemblerD2Ev$' "$TMPDIR/swiftshader-symbols.txt"; then
       echo "SwiftShader static archive missing defined llvm::MCDisassembler" >&2
       grep -E 'MCDisassembler' "$TMPDIR/swiftshader-symbols.txt" | head -20 >&2 || true
+      exit 1
+    fi
+    # Case-fold merge bugs drop LLVM Pass / object Error RTTI (Pass.cpp.o vs
+    # SPIRV pass.cpp.o). Require both vtables so iOS-sim Ld does not die.
+    if ! grep -E ' [TDS] __ZTVN4llvm4PassE$' "$TMPDIR/swiftshader-symbols.txt"; then
+      echo "SwiftShader static archive missing llvm::Pass vtable (case-fold merge?)" >&2
+      grep -E 'ZTVN4llvm4Pass' "$TMPDIR/swiftshader-symbols.txt" | head -10 >&2 || true
+      exit 1
+    fi
+    if ! grep -E ' [TDS] __ZTVN4llvm6object11BinaryErrorE$' "$TMPDIR/swiftshader-symbols.txt"; then
+      echo "SwiftShader static archive missing llvm::object::BinaryError vtable" >&2
+      grep -E 'BinaryError' "$TMPDIR/swiftshader-symbols.txt" | head -10 >&2 || true
       exit 1
     fi
 ''}
