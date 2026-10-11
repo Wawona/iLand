@@ -229,10 +229,19 @@ ${lib.optionalString (!buildShared) ''
     runHook preInstall
     mkdir -p "$out/lib"
 
-    icd=$(find build -type f -name '${if buildShared then "libvk_swiftshader.dylib" else "libvk_swiftshader.a"}' -print -quit)
+    # Absolute paths: extract loop cds into a temp dir, so relative build/*
+    # paths from find would miss (ar: build/iOS/libvk_swiftshader.a: No such
+    # file). Prefer the ninja output under src/Vulkan over Xcode-style
+    # build/iOS copies when both exist.
+    icd=$(
+      find "$PWD/build/src/Vulkan" -type f -name '${if buildShared then "libvk_swiftshader.dylib" else "libvk_swiftshader.a"}' -print -quit 2>/dev/null || true
+    )
+    if [ -z "$icd" ]; then
+      icd=$(find "$PWD/build" -type f -name '${if buildShared then "libvk_swiftshader.dylib" else "libvk_swiftshader.a"}' -print -quit)
+    fi
     test -n "$icd" || {
       echo "SwiftShader ${appleSdk} ${if buildShared then "Vulkan ICD (libvk_swiftshader.dylib)" else "static Vulkan archive (libvk_swiftshader.a)"} was not produced" >&2
-      find build -name 'libvk_swiftshader*' -o -name '*.dylib' -o -name '*.a' | head -50 >&2
+      find "$PWD/build" -name 'libvk_swiftshader*' -o -name '*.dylib' -o -name '*.a' | head -50 >&2
       exit 1
     }
 ${if buildShared then ''
@@ -254,8 +263,8 @@ ${if buildShared then ''
       esac
       archives+=("$archive")
     done < <(
-      find build -type f -name '*.a' \
-        ! -path 'build/bin/*' \
+      find "$PWD/build" -type f -name '*.a' \
+        ! -path '*/build/bin/*' \
         -print | LC_ALL=C sort
     )
     test "''${#archives[@]}" -gt 1
