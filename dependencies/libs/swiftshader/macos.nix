@@ -252,10 +252,12 @@ ${if buildShared then ''
     # LLVM under build/ (including Darwin/iOS MC). Skip build/bin (API copies).
     # Always put "$icd" first: excluding every libvk_swiftshader.a by name
     # dropped the namespaced Vulkan objects and failed the ABI grep.
-    # Dependency archives repeat .o basenames; keep-largest by exact name.
-    # Never write original basenames into Darwin TMPDIR: APFS is
-    # case-insensitive, so Pass.cpp.o vs pass.cpp.o (LLVM vs SPIRV-Tools)
-    # collide and drop LLVM RTTI / Pass vtables. Stage as keep-%d.o.
+    # Dependency archives repeat .o basenames. keep-largest-by-name drops
+    # Reactor Debug.cpp.o / Memory.cpp.o when a larger LLVM twin wins
+    # (rr::warn / sw::freeMemory then undefined at app Ld). Dedupe by
+    # content hash instead. Parse ar bytes (no ar x): Darwin TMPDIR is
+    # case-insensitive and would fold Pass.cpp.o vs pass.cpp.o on extract.
+    # Stage outputs as keep-%d.o only.
     archives=("$icd")
     while IFS= read -r archive; do
       [ "$archive" = "$icd" ] && continue
@@ -275,55 +277,67 @@ ${if buildShared then ''
     archive_list="$TMPDIR/swiftshader-archives.txt"
     printf '%s\n' "''${archives[@]}" > "$archive_list"
     python3 - "$archive_list" "$merge_dir" <<'PY'
-import os, subprocess, sys
+import hashlib, os, sys
 
 list_path, merge_dir = sys.argv[1], sys.argv[2]
 archives = [ln.strip() for ln in open(list_path) if ln.strip()]
-# Exact basename -> largest bytes (case-sensitive keys).
-best = {}
-for i, archive in enumerate(archives):
-    ext = os.path.join(os.environ["TMPDIR"], "ss-ar-ext-%d" % i)
-    os.makedirs(ext, exist_ok=True)
-    subprocess.check_call(
-        ["xcrun", "--sdk", "${appleSdk}", "ar", "x", archive],
-        cwd=ext,
-    )
-    for name in os.listdir(ext):
+
+def iter_members(path):
+    with open(path, "rb") as f:
+        if f.read(8) != b"!<arch>\n":
+            raise SystemExit("not an ar archive: %s" % path)
+        while True:
+            header = f.read(60)
+            if len(header) < 60:
+                break
+            name = header[0:16].decode("ascii", "replace").strip()
+            size = int(header[48:58])
+            data = f.read(size)
+            if size % 2:
+                f.read(1)
+            if name.startswith("#1/"):
+                nlen = int(name[3:])
+                name = data[:nlen].split(b"\0", 1)[0].decode("ascii", "replace")
+                data = data[nlen:]
+            if name.endswith("/"):
+                name = name[:-1]
+            yield name, data
+
+# content sha256 -> (original_name, data). Identical copies across
+# archives collapse; distinct Debug.cpp.o (Reactor vs LLVM) both stay.
+by_hash = {}
+names_for_fold = []
+for archive in archives:
+    for name, data in iter_members(archive):
         if not name.endswith(".o"):
             continue
-        path = os.path.join(ext, name)
-        if not os.path.isfile(path):
-            continue
-        data = open(path, "rb").read()
-        prev = best.get(name)
-        if prev is None or len(data) > len(prev):
-            best[name] = data
+        digest = hashlib.sha256(data).digest()
+        if digest not in by_hash:
+            by_hash[digest] = (name, data)
+            names_for_fold.append(name)
 
-if len(best) < 2:
-    raise SystemExit("too few unique .o members: %d" % len(best))
+if len(by_hash) < 2:
+    raise SystemExit("too few unique .o members: %d" % len(by_hash))
 
-# Fail closed if Darwin case-fold would have collapsed LLVM vs SPIRV pairs.
 folded = {}
-for name in best:
+for name in names_for_fold:
     folded.setdefault(name.lower(), []).append(name)
-pairs = [v for v in folded.values() if len(v) > 1]
+pairs = [v for v in folded.values() if len(set(v)) > 1]
 print(
     "swiftshader-merge: %d case-variant basename groups kept separate"
     % len(pairs)
 )
-# LLVM (Pass.cpp.o) vs SPIRV-Tools (pass.cpp.o) and similar pairs. If this
-# drops to 0, Darwin case-fold staging is broken again.
 if len(pairs) < 8:
     raise SystemExit(
         "expected >=8 case-variant .o pairs (LLVM vs SPIRV); got %d: %r"
         % (len(pairs), pairs[:8])
     )
 
-for i, (name, data) in enumerate(sorted(best.items())):
-    # keep-%d.o only: never embed basename (case-fold safe).
+members = sorted(by_hash.values(), key=lambda t: t[0])
+for i, (_name, data) in enumerate(members):
     out = os.path.join(merge_dir, "keep-%d.o" % i)
     open(out, "wb").write(data)
-print("swiftshader-merge: %d unique .o members (keep-largest)" % len(best))
+print("swiftshader-merge: %d unique .o members (content-hash)" % len(members))
 PY
     obj_count=$(find "$merge_dir" -name 'keep-*.o' | wc -l | tr -d ' ')
     test "$obj_count" -gt 1
@@ -364,6 +378,18 @@ PY
     if ! grep -E ' [TDS] __ZTVN4llvm6object11BinaryErrorE$' "$TMPDIR/swiftshader-symbols.txt"; then
       echo "SwiftShader static archive missing llvm::object::BinaryError vtable" >&2
       grep -E 'BinaryError' "$TMPDIR/swiftshader-symbols.txt" | head -10 >&2 || true
+      exit 1
+    fi
+    # Basename keep-largest used to drop Reactor Debug/Memory when LLVM
+    # twins were larger. Require Reactor + System alloc symbols.
+    if ! grep -E ' T __ZN2rr4warnEPKcz$' "$TMPDIR/swiftshader-symbols.txt"; then
+      echo "SwiftShader static archive missing rr::warn (Reactor Debug.cpp.o dropped?)" >&2
+      grep -E 'rr4warn|Reactor' "$TMPDIR/swiftshader-symbols.txt" | head -10 >&2 || true
+      exit 1
+    fi
+    if ! grep -E ' T __ZN2sw10freeMemoryEPv$' "$TMPDIR/swiftshader-symbols.txt"; then
+      echo "SwiftShader static archive missing sw::freeMemory (System/Memory.cpp.o dropped?)" >&2
+      grep -E 'freeMemory|allocateZeroOrPoison' "$TMPDIR/swiftshader-symbols.txt" | head -10 >&2 || true
       exit 1
     fi
 ''}
