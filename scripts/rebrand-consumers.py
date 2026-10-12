@@ -1,23 +1,21 @@
 #!/usr/bin/env python3
-"""Update sibling checkouts: iLand → iLand URLs + flake input iland."""
+"""Update sibling checkouts: wwn-iland repo refs → iLand; flake input → iland."""
 from __future__ import annotations
 
 import re
 import sys
 from pathlib import Path
 
-# Parents of this repo: .../Wawona/iLand → workspace root
 WORKSPACE = Path(__file__).resolve().parents[2]
 
 SKIP_DIR_NAMES = {
     ".git",
-    "result",
-    "result-ios-sim",
-    "result-ios-sim-tip",
     "node_modules",
     "XCBuildData",
     ".cache",
     "corebedtime-tip",
+    "host-python-site",
+    "build-iOS-arm64",
 }
 SKIP_SUFFIXES = {
     ".gif",
@@ -31,90 +29,84 @@ SKIP_SUFFIXES = {
     ".dylib",
     ".so",
     ".wasm",
-    ".lock.bak",
 }
 
-# Order matters: longer / more specific first.
-SUBS = [
-    (r"github\.com/Wawona/iLand", "github.com/Wawona/iLand"),
-    (r"github:Wawona/iLand", "github:Wawona/iLand"),
-    (r"flakehub\.com/f/Wawona/iLand", "flakehub.com/f/Wawona/iLand"),
-    (r"api\.flakehub\.com/f/pinned/Wawona/iLand", "api.flakehub.com/f/pinned/Wawona/iLand"),
-    (r"Wawona/iLand", "Wawona/iLand"),
-    # flake.lock node / original.repo
-    (r'"repo": "iLand"', '"repo": "iLand"'),
-    # flake input attribute (nix)
+# Specific → general. Do not blanket-replace crate names like wwn-iland-iomfb.
+URL_SUBS = [
+    (r"github\.com/Wawona/wwn-iland", "github.com/Wawona/iLand"),
+    (r"github:Wawona/wwn-iland", "github:Wawona/iLand"),
+    (r"flakehub\.com/f/Wawona/wwn-iland", "flakehub.com/f/Wawona/iLand"),
+    (r"api\.flakehub\.com/f/pinned/Wawona/wwn-iland", "api.flakehub.com/f/pinned/Wawona/iLand"),
+    (r"Wawona/wwn-iland", "Wawona/iLand"),
+    (r'"repo": "wwn-iland"', '"repo": "iLand"'),
+]
+
+FLAKE_INPUT_SUBS = [
     (r"\bwwn-iland\.inputs\b", "iland.inputs"),
     (r"\bwwn-iland\.url\b", "iland.url"),
     (r"\bwwn-iland\.registryFragment\b", "iland.registryFragment"),
     (r"\bwwn-iland\.follows\b", "iland.follows"),
-    (r"inputs\.iLand\b", "inputs.iland"),
+    (r"inputs\.wwn-iland\b", "inputs.iland"),
+    (r"ilandSrc = wwn-iland\b", "ilandSrc = iland"),
+    (r"\$\{wwn-iland\}", "${iland}"),
     (r"\bwwn-iland,\b", "iland,"),
-    (r"\(\s*iLand\s*,", "(iland,"),
-    (r"\{\s*iLand\s*,", "{iland,"),
+    (r"\(\s*wwn-iland\s*,", "(iland,"),
+    (r"\{\s*wwn-iland\s*,", "{iland,"),
     (r"\bwwn-iland\s*\}", "iland}"),
-    (r'ilandSrc = iLand\b', "ilandSrc = iland"),
-    (r"\$\{iLand\}", "${iland}"),
-    (r'"iLand"', '"iland"'),  # lock keys / JSON where string form is input name
-]
-
-# Prose leftover (after URLs). Keep product keys like iland-baremetal.
-PROSE = [
-    (r"`iLand`", "`iLand`"),
-    (r"\bwwn-iland\b", "iLand"),
 ]
 
 
 def should_skip(path: Path) -> bool:
-    parts = set(path.parts)
-    if parts & SKIP_DIR_NAMES:
+    if any(part in SKIP_DIR_NAMES for part in path.parts):
         return True
-    if any(p.startswith("result") for p in path.parts):
+    if any(part.startswith("result") for part in path.parts):
         return True
     if path.suffix.lower() in SKIP_SUFFIXES:
         return True
-    # Do not rewrite this repo's corebedtime vendor dump
     if "corebedtime-tip" in path.parts and path.name != "SYNC.md":
+        return True
+    # Skip this repo's target/ build debris
+    if "target" in path.parts:
         return True
     return False
 
 
-def transform(text: str, *, is_lock: bool) -> str:
+def transform(text: str, *, is_lock: bool, is_flake_nix: bool) -> str:
     out = text
-    for pat, repl in SUBS:
+    for pat, repl in URL_SUBS:
         out = re.sub(pat, repl, out)
-    if not is_lock:
-        for pat, repl in PROSE:
+    if is_flake_nix or is_lock:
+        for pat, repl in FLAKE_INPUT_SUBS:
             out = re.sub(pat, repl, out)
-    # flake.lock: rename top-level node key "iLand" / "wwn-iland_2"
     if is_lock:
-        out = re.sub(r'"iLand(_\d+)?"\s*:', lambda m: f'"iland{m.group(1) or ""}":', out)
-        # follows arrays that still say iLand
-        out = out.replace('"iLand"', '"iland"')
+        # Rename lock nodes wwn-iland / wwn-iland_2 → iland / iland_2
+        out = re.sub(r'"wwn-iland(_\d+)?"\s*:', lambda m: f'"iland{m.group(1) or ""}":', out)
+        out = out.replace('"wwn-iland"', '"iland"')
+    else:
+        # Prose: keep hyphenated crate/path tokens that start with wwn-iland-
+        out = re.sub(r"`wwn-iland`", "`iLand`", out)
+        out = re.sub(r"(?<![\w-])wwn-iland(?![\w-])", "iLand", out)
     return out
 
 
 def main() -> int:
-    roots = [WORKSPACE]
-    if len(sys.argv) > 1:
-        roots = [Path(p).resolve() for p in sys.argv[1:]]
-
-    updated = []
+    roots = [Path(p).resolve() for p in sys.argv[1:]] if len(sys.argv) > 1 else [WORKSPACE]
+    updated: list[Path] = []
     for root in roots:
         for path in root.rglob("*"):
             if not path.is_file() or should_skip(path):
-                continue
-            # Bound: skip huge unrelated trees
-            if "build-iOS-arm64" in path.parts or "host-python-site" in path.parts:
                 continue
             try:
                 text = path.read_text(encoding="utf-8")
             except (UnicodeDecodeError, OSError):
                 continue
-            if "iLand" not in text and "Wawona/iLand" not in text:
+            if "wwn-iland" not in text:
                 continue
-            is_lock = path.name == "flake.lock"
-            new = transform(text, is_lock=is_lock)
+            new = transform(
+                text,
+                is_lock=path.name == "flake.lock",
+                is_flake_nix=path.name == "flake.nix",
+            )
             if new != text:
                 path.write_text(new, encoding="utf-8")
                 updated.append(path)

@@ -9,7 +9,7 @@ stays inside the host app for Wayland/Weston GL clients
 
 Extracted from the Wawona monorepo. Built with [wwn-toolchain](https://github.com/Wawona/wwn-toolchain).
 
-## Layer identity (L1) — acyclic DAG
+## Layer identity (L1) .  acyclic DAG
 
 ```text
 L0 wwn-toolchain (substrate: cairo/pango/pixman/libwayland/…)
@@ -40,13 +40,13 @@ shims stay under `dependencies/libs/iland/upstream/`.
 
 
 `iLand` was inspired by and originally forked from
-[**corebedtime/iland**](https://github.com/CoreBedtime/iland) — the project that
+[**corebedtime/iland**](https://github.com/CoreBedtime/iland) .  the project that
 pioneered replacing the macOS WindowServer/SkyLight stack with a custom
 `IOSurface`/Metal-backed framebuffer that mimics Linux DRM/KMS/EGL/GBM. All
 credit for the original macOS approach goes to bedtime
 ([corebedtime/iland](https://github.com/CoreBedtime/iland)).
 
-This repo is the new home of what used to live at `Wawona/iland`. Beyond the
+This repo is the new home of what used to live at `Wawona/wwn-iland`. Beyond the
 upstream macOS-only layer, `iLand` adds and implements substantial changes:
 
 - **KMS/DRM on iOS** and across the rest of the Apple platform family
@@ -67,12 +67,12 @@ registry = wwn-toolchain.lib.baseRegistry // iLand.registryFragment;
 extraArgs = { ilandSrc = iLand; };  # weston copies upstream/shims/* from here
 ```
 
-- `registryFragment.iland` — Mode A per-platform userland archives (iOS family +
+- `registryFragment.iland` .  Mode A per-platform userland archives (iOS family +
   macOS + Android). App-Store-safe in-window present.
-- `registryFragment.angle` / `registryFragment.swiftshader` — L1-owned graphics
+- `registryFragment.angle` / `registryFragment.swiftshader` .  L1-owned graphics
   translator and software Vulkan recipes. Consumers must merge this fragment;
   toolchain `baseRegistry` contains fail-loud ownership sentinels only.
-- `registryFragment.iland-baremetal` — **macOS only** Mode B
+- `registryFragment.iland-baremetal` .  **macOS only** Mode B
   `libwayland-mac.dylib` (Dobby + embedded `framebufferd` / `inputd` /
   `amfiexceptiond`). Desktop Replacement / WindowServer path. Never built for
   iOS/iPadOS/tvOS/watchOS/visionOS/Android.
@@ -87,7 +87,7 @@ extraArgs = { ilandSrc = iLand; };  # weston copies upstream/shims/* from here
 | Platforms | macOS, iOS/iPadOS/visionOS, Android; tvOS/watchOS stubs | **macOS only** |
 | Present | In-process `iland_drm_set_present_callback` | Mach IPC → `framebufferd` (SkyLight) |
 | SIP / root | Not required | SIP fully disabled (`csrutil disable`) + root |
-| App Store | Yes | No — Developer ID / desktop-host only |
+| App Store | Yes | No .  Developer ID / desktop-host only |
 
 Wawona wires Mode B only when SIP allows (`WWNSipStatus`) **and** Settings →
 Desktop → Enable Desktop Replacement is on. Otherwise Mode A.
