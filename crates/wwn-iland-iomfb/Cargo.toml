@@ -1,6 +1,6 @@
 [package]
 name = "iland-iomfb"
-version = "26.9.9"
+version = "26.10.12"
 edition = "2021"
 license = "MIT"
 description = "Rust-owned Wawona iOS Mode B IOMobileFramebuffer display sink"
