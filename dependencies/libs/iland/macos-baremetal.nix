@@ -48,7 +48,7 @@ pkgs.stdenv.mkDerivation {
     # Skip upstream test/kmscube targets (MacPorts ANGLE paths; not needed for
     # the product dylib).
     substituteInPlace CMakeLists.txt \
-      --replace 'add_subdirectory(test)' '# add_subdirectory(test) # wwn-iland: skipped'
+      --replace 'add_subdirectory(test)' '# add_subdirectory(test) # iLand: skipped'
 
     # De-MacPorts: EGL shim still embeds /opt/local candidates for the Mode B
     # fallback GLES load path.
@@ -143,7 +143,7 @@ target_compile_definitions(egl-shim PRIVATE ILAND_NO_WL_WINSYS=1)'
 
   meta = with lib; {
     description = "iland Mode B WindowServer-replacement dylib (Dobby + framebufferd) for macOS";
-    homepage = "https://github.com/Wawona/wwn-iland";
+    homepage = "https://github.com/Wawona/iLand";
     license = licenses.mit;
     platforms = platforms.darwin;
     # Intentionally not hydra-safe / store-safe.

@@ -38,7 +38,7 @@ let
   );
 
   prebuilt = pkgs.fetchurl {
-    url = "https://github.com/Wawona/wwn-iland/releases/download/swiftshader-ios-static-436722b/${
+    url = "https://github.com/Wawona/iLand/releases/download/swiftshader-ios-static-436722b/${
       if simulator then
         "swiftshader-ios-simulator-arm64-static-436722b.tar"
       else
@@ -80,7 +80,7 @@ if !usePrebuilt then sourceBuild else pkgs.stdenv.mkDerivation {
 
   meta = with lib; {
     description = "Prebuilt static SwiftShader Vulkan archive for ${if simulator then "the iOS Simulator" else "iOS"}";
-    homepage = "https://github.com/Wawona/wwn-iland/releases/tag/swiftshader-ios-static-436722b";
+    homepage = "https://github.com/Wawona/iLand/releases/tag/swiftshader-ios-static-436722b";
     license = licenses.asl20;
     platforms = platforms.darwin;
   };

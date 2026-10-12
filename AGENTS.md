@@ -1,4 +1,4 @@
-# AGENTS.md — wwn-iland
+# AGENTS.md — iLand
 
 Guidance for AI agents editing this repository.
 
@@ -9,8 +9,8 @@ ANGLE on Apple and AHardwareBuffer/Surface on Android). Fork lineage:
 [CoreBedtime/iland](https://github.com/CoreBedtime/iland) → deleted
 `Wawona/iland` → **this repo**.
 
-Query **wwn-mcp** (`project=iland`, source `wwn-iland` for packaging; source
-`iland` for upstream CoreBedtime reference). Prefer `wwn-iland` recipes over
+Query **wwn-mcp** (`project=iland`, source `iLand` for packaging; source
+`iland` for upstream CoreBedtime reference). Prefer `iLand` recipes over
 vanilla CoreBedtime behavior.
 
 ## Mode A vs Mode B (non-negotiable)
@@ -27,7 +27,7 @@ vanilla CoreBedtime behavior.
 - tvOS Mode A is real userland: MoltenVK (Vulkan to Metal) and ANGLE
   (OpenGL ES to Metal), both source/static like visionOS. watchOS Mode A
   stays an empty stub (no Metal in the SDK). See workspace
-  rule `wwn-iland-apple-fallback`.
+  rule `iLand-apple-fallback`.
 
 Canonical prose (integration side):
 `Wawona/docs/iland-mode-a-b-desktop.md` and workspace rule
@@ -39,7 +39,7 @@ encodings, 25F80 disasm, safe-call rules):
 
 ## Repo DAG layer (L1) — never invert
 
-`wwn-iland` is **L1: the complete Wawona graphics stack** (iland userland
+`iLand` is **L1: the complete Wawona graphics stack** (iland userland
 DRM/KMS/GBM/EGL present + Mode A/B; `angle`, `swiftshader`,
 `moltenvk`, `kosmickrisp`, `iland-cpu`). It depends on
 **`wwn-toolchain` (L0) ONLY**.

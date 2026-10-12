@@ -25,12 +25,12 @@ let
   };
 in
 rustPlatform.buildRustPackage {
-  pname = "wwn-iland-iomfb";
+  pname = "iLand-iomfb";
   version = ilandVersion;
-  src = ../../../crates/wwn-iland-iomfb;
+  src = ../../../crates/iLand-iomfb;
   __noChroot = true;
 
-  cargoLock.lockFile = ../../../crates/wwn-iland-iomfb/Cargo.lock;
+  cargoLock.lockFile = ../../../crates/iLand-iomfb/Cargo.lock;
   CARGO_BUILD_TARGET = cargoTarget;
   doCheck = false;
 

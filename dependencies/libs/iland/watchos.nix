@@ -10,7 +10,7 @@ pkgs.runCommand "iland-userland-watchos-stub-${ilandVersion}" {
   nativeBuildInputs = [ pkgs.binutils ];
   version = ilandVersion;
   meta = {
-    homepage = "https://github.com/Wawona/wwn-iland";
+    homepage = "https://github.com/Wawona/iLand";
     description = "watchOS iland stub (no GPU userland)";
   };
 } ''

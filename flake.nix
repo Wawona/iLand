@@ -1,5 +1,5 @@
 {
-  description = "wwn-iland: Wawona's userland Linux-graphics compat layer (GBM/EGL/DRM over IOSurface/ANGLE) replacing the WindowServer/SkyLight path for Wayland/Weston GL clients on Apple platforms.";
+  description = "iLand: Wawona userland Linux-graphics compat layer (GBM/EGL/DRM over IOSurface/ANGLE). Formerly wwn-iland.";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";

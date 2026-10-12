@@ -251,6 +251,6 @@ Safety for takeover therefore means **safe SPI calling inside framebufferd**, pl
 | Artifact | Path |
 |--|--|
 | Extracted dylibs (local RE) | `~/GhidraVibe/dyld-extracted/modeb-25F80/{CoreDisplay,SkyLight,QuartzCore}` |
-| This doc | `wwn-iland/docs/mode-b/baremetal-display-spi-25F80.md` |
-| Disasm snippets | `wwn-iland/docs/mode-b/disasm-25F80/` |
+| This doc | `iLand/docs/mode-b/baremetal-display-spi-25F80.md` |
+| Disasm snippets | `iLand/docs/mode-b/disasm-25F80/` |
 | Product Mode B prose | `Wawona/docs/iland-mode-a-b-desktop.md` |

@@ -240,7 +240,7 @@ pkgs.stdenv.mkDerivation {
 
   meta = with lib; {
     description = "iland userland in-window Linux-graphics compat (GBM/EGL/DRM over IOSurface+ANGLE) for macOS";
-    homepage = "https://github.com/Wawona/wwn-iland";
+    homepage = "https://github.com/Wawona/iLand";
     license = licenses.mit;
     platforms = platforms.darwin;
   };

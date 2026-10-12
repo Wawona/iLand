@@ -1,6 +1,6 @@
-# wwn-iland
+# iLand
 
-[![CI](https://github.com/Wawona/wwn-iland/actions/workflows/ci.yml/badge.svg)](https://github.com/Wawona/wwn-iland/actions/workflows/ci.yml)
+[![CI](https://github.com/Wawona/iLand/actions/workflows/ci.yml/badge.svg)](https://github.com/Wawona/iLand/actions/workflows/ci.yml)
 
 Wawona's userland Linux-graphics compatibility layer: GBM / EGL / DRM-KMS over
 Apple `IOSurface` + ANGLE, providing the "Mode A" in-window present path that
@@ -14,12 +14,12 @@ Extracted from the Wawona monorepo. Built with [wwn-toolchain](https://github.co
 ```text
 L0 wwn-toolchain (substrate: cairo/pango/pixman/libwayland/…)
    ▼
-L1 wwn-iland (this repo: complete graphics stack) → depends on toolchain ONLY
+L1 iLand (this repo: complete graphics stack) → depends on toolchain ONLY
    ▼
 L2 wwn-kmscube → L3 wwn-weston → L4 Wawona
 ```
 
-`wwn-iland` is **L1: the complete Wawona graphics stack** (userland
+`iLand` is **L1: the complete Wawona graphics stack** (userland
 DRM/KMS/GBM/EGL present + Mode A/B; ANGLE, SwiftShader, MoltenVK, and Vulkan ICD
 packaging). It depends on
 `wwn-toolchain` (L0) only. Never add weston/kmscube/waypipe/Wawona as a flake
@@ -39,7 +39,7 @@ shims stay under `dependencies/libs/iland/upstream/`.
 
 
 
-`wwn-iland` was inspired by and originally forked from
+`iLand` was inspired by and originally forked from
 [**corebedtime/iland**](https://github.com/CoreBedtime/iland) — the project that
 pioneered replacing the macOS WindowServer/SkyLight stack with a custom
 `IOSurface`/Metal-backed framebuffer that mimics Linux DRM/KMS/EGL/GBM. All
@@ -47,7 +47,7 @@ credit for the original macOS approach goes to bedtime
 ([corebedtime/iland](https://github.com/CoreBedtime/iland)).
 
 This repo is the new home of what used to live at `Wawona/iland`. Beyond the
-upstream macOS-only layer, `wwn-iland` adds and implements substantial changes:
+upstream macOS-only layer, `iLand` adds and implements substantial changes:
 
 - **KMS/DRM on iOS** and across the rest of the Apple platform family
   (iPadOS/tvOS/visionOS), not just macOS.
@@ -60,11 +60,11 @@ upstream macOS-only layer, `wwn-iland` adds and implements substantial changes:
 ## Use
 
 ```nix
-inputs.wwn-iland.url = "github:Wawona/wwn-iland";
+inputs.iLand.url = "github:Wawona/iLand";
 
 # Wawona merges the fragment and threads the source for shim copying:
-registry = wwn-toolchain.lib.baseRegistry // wwn-iland.registryFragment;
-extraArgs = { ilandSrc = wwn-iland; };  # weston copies upstream/shims/* from here
+registry = wwn-toolchain.lib.baseRegistry // iLand.registryFragment;
+extraArgs = { ilandSrc = iLand; };  # weston copies upstream/shims/* from here
 ```
 
 - `registryFragment.iland` — Mode A per-platform userland archives (iOS family +

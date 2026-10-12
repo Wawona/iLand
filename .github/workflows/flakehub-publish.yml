@@ -22,7 +22,7 @@ jobs:
       - uses: DeterminateSystems/determinate-nix-action@v3
       - uses: DeterminateSystems/flakehub-push@main
         with:
-          name: Wawona/wwn-iland
+          name: Wawona/iLand
           rolling: true
           visibility: public
           # Inspecting every output on ubuntu-latest throws (Android SDK /

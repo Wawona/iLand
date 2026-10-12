@@ -110,7 +110,7 @@ EOF
 
   meta = with lib; {
     description = "GL test clients (kmscube) over iland GBM/EGL/DRM + ANGLE for macOS";
-    homepage = "https://github.com/Wawona/wwn-iland";
+    homepage = "https://github.com/Wawona/iLand";
     license = licenses.mit;
     platforms = platforms.darwin;
   };

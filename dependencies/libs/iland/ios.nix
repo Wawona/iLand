@@ -243,7 +243,7 @@ libdir=\''${prefix}/lib
 includedir=\''${prefix}/include
 
 Name: gbm
-Description: wwn-iland IOSurface-backed GBM ABI
+Description: iLand IOSurface-backed GBM ABI
 Version: 1.0.0
 Libs: -L\''${libdir} -liland_userland
 Cflags: -I\''${includedir}
@@ -273,7 +273,7 @@ EOF
 
   meta = with lib; {
     description = "iland userland in-window Linux-graphics compat (GBM/EGL/DRM over IOSurface+ANGLE) for iOS";
-    homepage = "https://github.com/Wawona/wwn-iland";
+    homepage = "https://github.com/Wawona/iLand";
     license = licenses.mit;
     platforms = platforms.darwin;
   };
