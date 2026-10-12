@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""One-shot: rebrand wwn-iland → iLand in this repo (skip corebedtime-tip)."""
+"""One-shot: rebrand iLand → iLand in this repo (skip corebedtime-tip)."""
 from __future__ import annotations
 
 import re
@@ -19,10 +19,10 @@ SKIP_SUFFIXES = {
     ".so",
 }
 URL_SUBS = [
-    (r"github\.com/Wawona/wwn-iland", "github.com/Wawona/iLand"),
-    (r"github:Wawona/wwn-iland", "github:Wawona/iLand"),
-    (r"flakehub\.com/f/Wawona/wwn-iland", "flakehub.com/f/Wawona/iLand"),
-    (r"Wawona/wwn-iland", "Wawona/iLand"),
+    (r"github\.com/Wawona/iLand", "github.com/Wawona/iLand"),
+    (r"github:Wawona/iLand", "github:Wawona/iLand"),
+    (r"flakehub\.com/f/Wawona/iLand", "flakehub.com/f/Wawona/iLand"),
+    (r"Wawona/iLand", "Wawona/iLand"),
 ]
 
 
@@ -46,8 +46,8 @@ def main() -> None:
         orig = text
         for pat, repl in URL_SUBS:
             text = re.sub(pat, repl, text)
-        text = text.replace("# wwn-iland", "# iLand")
-        text = text.replace("`wwn-iland`", "`iLand`")
+        text = text.replace("# iLand", "# iLand")
+        text = text.replace("`iLand`", "`iLand`")
         text = re.sub(r"\bwwn-iland\b", "iLand", text)
         if text != orig:
             path.write_text(text, encoding="utf-8")
@@ -58,7 +58,7 @@ def main() -> None:
     t2 = re.sub(
         r'description = "[^"]*";',
         'description = "iLand: Wawona userland Linux-graphics compat layer '
-        '(GBM/EGL/DRM over IOSurface/ANGLE). Formerly wwn-iland.";',
+        '(GBM/EGL/DRM over IOSurface/ANGLE). Formerly iLand.";',
         t,
         count=1,
     )

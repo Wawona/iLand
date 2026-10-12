@@ -46,7 +46,7 @@ pioneered replacing the macOS WindowServer/SkyLight stack with a custom
 credit for the original macOS approach goes to bedtime
 ([corebedtime/iland](https://github.com/CoreBedtime/iland)).
 
-This repo is the new home of what used to live at `Wawona/wwn-iland`. Beyond the
+This repo is the new home of what used to live at `Wawona/iLand`. Beyond the
 upstream macOS-only layer, `iLand` adds and implements substantial changes:
 
 - **KMS/DRM on iOS** and across the rest of the Apple platform family

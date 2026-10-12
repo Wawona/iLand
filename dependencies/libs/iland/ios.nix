@@ -243,7 +243,7 @@ libdir=\''${prefix}/lib
 includedir=\''${prefix}/include
 
 Name: gbm
-Description: iLand IOSurface-backed GBM ABI
+Description: iland IOSurface-backed GBM ABI
 Version: 1.0.0
 Libs: -L\''${libdir} -liland_userland
 Cflags: -I\''${includedir}

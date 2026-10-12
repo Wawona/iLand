@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Update sibling checkouts: wwn-iland repo refs → iLand; flake input → iland."""
+"""Update sibling checkouts: iLand repo refs → iLand; flake input → iland."""
 from __future__ import annotations
 
 import re
@@ -33,12 +33,12 @@ SKIP_SUFFIXES = {
 
 # Specific → general. Do not blanket-replace crate names like wwn-iland-iomfb.
 URL_SUBS = [
-    (r"github\.com/Wawona/wwn-iland", "github.com/Wawona/iLand"),
-    (r"github:Wawona/wwn-iland", "github:Wawona/iLand"),
-    (r"flakehub\.com/f/Wawona/wwn-iland", "flakehub.com/f/Wawona/iLand"),
-    (r"api\.flakehub\.com/f/pinned/Wawona/wwn-iland", "api.flakehub.com/f/pinned/Wawona/iLand"),
-    (r"Wawona/wwn-iland", "Wawona/iLand"),
-    (r'"repo": "wwn-iland"', '"repo": "iLand"'),
+    (r"github\.com/Wawona/iLand", "github.com/Wawona/iLand"),
+    (r"github:Wawona/iLand", "github:Wawona/iLand"),
+    (r"flakehub\.com/f/Wawona/iLand", "flakehub.com/f/Wawona/iLand"),
+    (r"api\.flakehub\.com/f/pinned/Wawona/iLand", "api.flakehub.com/f/pinned/Wawona/iLand"),
+    (r"Wawona/iLand", "Wawona/iLand"),
+    (r'"repo": "iLand"', '"repo": "iLand"'),
 ]
 
 FLAKE_INPUT_SUBS = [
@@ -46,12 +46,12 @@ FLAKE_INPUT_SUBS = [
     (r"\bwwn-iland\.url\b", "iland.url"),
     (r"\bwwn-iland\.registryFragment\b", "iland.registryFragment"),
     (r"\bwwn-iland\.follows\b", "iland.follows"),
-    (r"inputs\.wwn-iland\b", "inputs.iland"),
-    (r"ilandSrc = wwn-iland\b", "ilandSrc = iland"),
-    (r"\$\{wwn-iland\}", "${iland}"),
+    (r"inputs\.iLand\b", "inputs.iland"),
+    (r"ilandSrc = iLand\b", "ilandSrc = iland"),
+    (r"\$\{iLand\}", "${iland}"),
     (r"\bwwn-iland,\b", "iland,"),
-    (r"\(\s*wwn-iland\s*,", "(iland,"),
-    (r"\{\s*wwn-iland\s*,", "{iland,"),
+    (r"\(\s*iLand\s*,", "(iland,"),
+    (r"\{\s*iLand\s*,", "{iland,"),
     (r"\bwwn-iland\s*\}", "iland}"),
 ]
 
@@ -79,13 +79,13 @@ def transform(text: str, *, is_lock: bool, is_flake_nix: bool) -> str:
         for pat, repl in FLAKE_INPUT_SUBS:
             out = re.sub(pat, repl, out)
     if is_lock:
-        # Rename lock nodes wwn-iland / wwn-iland_2 → iland / iland_2
-        out = re.sub(r'"wwn-iland(_\d+)?"\s*:', lambda m: f'"iland{m.group(1) or ""}":', out)
-        out = out.replace('"wwn-iland"', '"iland"')
+        # Rename lock nodes iLand / wwn-iland_2 → iland / iland_2
+        out = re.sub(r'"iLand(_\d+)?"\s*:', lambda m: f'"iland{m.group(1) or ""}":', out)
+        out = out.replace('"iLand"', '"iland"')
     else:
         # Prose: keep hyphenated crate/path tokens that start with wwn-iland-
-        out = re.sub(r"`wwn-iland`", "`iLand`", out)
-        out = re.sub(r"(?<![\w-])wwn-iland(?![\w-])", "iLand", out)
+        out = re.sub(r"`iLand`", "`iLand`", out)
+        out = re.sub(r"(?<![\w-])iLand(?![\w-])", "iLand", out)
     return out
 
 
@@ -100,7 +100,7 @@ def main() -> int:
                 text = path.read_text(encoding="utf-8")
             except (UnicodeDecodeError, OSError):
                 continue
-            if "wwn-iland" not in text:
+            if "iLand" not in text:
                 continue
             new = transform(
                 text,

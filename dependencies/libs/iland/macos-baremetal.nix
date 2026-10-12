@@ -48,7 +48,7 @@ pkgs.stdenv.mkDerivation {
     # Skip upstream test/kmscube targets (MacPorts ANGLE paths; not needed for
     # the product dylib).
     substituteInPlace CMakeLists.txt \
-      --replace 'add_subdirectory(test)' '# add_subdirectory(test) # iLand: skipped'
+      --replace 'add_subdirectory(test)' '# add_subdirectory(test) # iland: skipped'
 
     # De-MacPorts: EGL shim still embeds /opt/local candidates for the Mode B
     # fallback GLES load path.
