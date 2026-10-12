@@ -33,6 +33,12 @@ of scope; use system Metal/Vulkan or SwiftShader.
 
 ## Credit / upstream
 
+Vendored tip for later port (not wired into recipes):
+`dependencies/libs/iland/corebedtime-tip/` (see `SYNC.md` there). Production
+shims stay under `dependencies/libs/iland/upstream/`.
+
+
+
 `wwn-iland` was inspired by and originally forked from
 [**corebedtime/iland**](https://github.com/CoreBedtime/iland) — the project that
 pioneered replacing the macOS WindowServer/SkyLight stack with a custom
