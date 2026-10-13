@@ -1,5 +1,10 @@
 add_executable(framebufferd src/main.c)
 
+# main.c is Objective-C (Foundation/QuartzCore, objc_msgSend, @autoreleasepool).
+# The .c extension makes CMake pick the C frontend by default, which rejects the
+# ObjC syntax in the Foundation headers. Force the Objective-C compiler.
+set_source_files_properties(src/main.c PROPERTIES LANGUAGE OBJC)
+
 target_include_directories(framebufferd PRIVATE
   ${CMAKE_SOURCE_DIR}/shims/drm/drm/include
 )

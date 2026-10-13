@@ -1,5 +1,10 @@
 add_executable(amfiexceptiond src/exception.c)
 
+# exception.c uses Objective-C (Foundation, objc/runtime, @autoreleasepool).
+# The .c extension makes CMake pick the C frontend by default, which rejects the
+# ObjC syntax. Force the Objective-C compiler.
+set_source_files_properties(src/exception.c PROPERTIES LANGUAGE OBJC)
+
 target_compile_options(amfiexceptiond PRIVATE
   -Wall -Wextra
   -Wno-deprecated-declarations
