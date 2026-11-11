@@ -48,6 +48,9 @@ pkgs.stdenv.mkDerivation {
 
   # Needs the macOS SDK (IOSurface/Accelerate/Foundation frameworks) via xcrun.
   __noChroot = true;
+  # cctools strip leaves libEGL.dylib's LINKEDIT string pool 4-byte aligned,
+  # which Xcode 27's ld refuses ("mis-aligned LINKEDIT string pool").
+  dontStrip = true;
 
   # wayland-scanner is multi-output; take it from PATH rather than guessing
   # which output holds the binary.
