@@ -19,7 +19,7 @@ jobs:
         run: grep -E 'actions/workflows/.+/badge\.svg' README.md
   eval:
     name: flake eval (instantiation)
-    runs-on: macos-15
+    runs-on: macos-27
     steps:
       - uses: actions/checkout@v5
       - uses: DeterminateSystems/nix-installer-action@main
@@ -37,7 +37,7 @@ jobs:
 
   build:
     name: build iland
-    runs-on: macos-15
+    runs-on: macos-27
     needs: eval
     steps:
       - uses: actions/checkout@v5
@@ -50,7 +50,7 @@ jobs:
 
   build-baremetal:
     name: build iland Mode B dylib
-    runs-on: macos-15
+    runs-on: macos-27
     needs: eval
     steps:
       - uses: actions/checkout@v5
